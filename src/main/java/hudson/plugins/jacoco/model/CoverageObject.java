@@ -20,6 +20,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import org.jacoco.core.analysis.ICoverageNode;
 import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
@@ -221,7 +223,7 @@ public abstract class CoverageObject<SELF extends CoverageObject<SELF>> {
 	 */
 	@Exported
 	public abstract SELF getPreviousResult();
-	
+
 	public CoverageObject<?> getParent() {return null;}
 
 	/**
@@ -273,72 +275,57 @@ public abstract class CoverageObject<SELF extends CoverageObject<SELF>> {
 		//String percent = percentFormat.format(ratio.getPercentageFloat());
 		String numerator = intFormat.format(ratio.getMissed());
 		String denominator = intFormat.format(ratio.getCovered());
-		int maximum = 1;
-		if (ratio.getType().equals(CoverageElement.Type.INSTRUCTION)) {
-			maximum = getParent().maxInstruction;
-		} else if (ratio.getType().equals(CoverageElement.Type.BRANCH)) {
-		    maximum = getParent().maxBranch;
-		} else if (ratio.getType().equals(CoverageElement.Type.COMPLEXITY)) {
-		    maximum = getParent().maxComplexity;
-		} else if (ratio.getType().equals(CoverageElement.Type.LINE)) {
-		    maximum = getParent().maxLine;
-		} else if (ratio.getType().equals(CoverageElement.Type.METHOD)) {
-		    maximum = getParent().maxMethod;
-		} else if (ratio.getType().equals(CoverageElement.Type.CLASS)) {
-		    maximum = getParent().maxClazz;
-		}
 
-		float redBar = ((float) ratio.getMissed())/maximum*100;
-		float greenBar = ((float)ratio.getTotal())/maximum*100;
+		int width = 100 - ratio.getPercentage();
 
 		buf.append("<table class='percentgraph' cellpadding='0px' cellspacing='0px'>")
-				.append("<tr>" +
-						"<td class='percentgraph' colspan='2'><span class='text'><b>M:</b> ").append(numerator).append(" <b>C:</b> ").append(denominator).append("</span></td></tr>")
-		.append("<tr>")
-		    .append("<td width='40px' class='data'>").append(ratio.getPercentage()).append("%</td>")	
-		    .append("<td>")
-		    .append("<div class='percentgraph' style='width: ").append(greenBar).append("px;'>")
-		    .append("<div class='redbar' style='width: ").append(redBar).append("px;'>")
+			.append("<tr>" +
+					"<td class='percentgraph' colspan='2'><span class='text'><b>M:</b> ").append(numerator).append(" <b>C:</b> ").append(denominator).append("</span></td></tr>")
+			.append("<tr>")
+		    .append("<td width='40px' class='data'>").append(ratio.getPercentage()).append("%</td>")
+		    .append("<td style='padding-left:2px;'>")
+		    .append("<div class='percentgraph' style='width:100px;'>")
+		    .append("<div class='redbar' style='width: ").append(width).append("px;'>")
 		    .append("</td></tr>")
 		    .append("</table>");
 	}
-	
+
 	protected <ReportLevel extends AggregatedReport<?,?,?> > void setAllCovTypes( ReportLevel reportToSet, ICoverageNode covReport) {
-		
+
 		Coverage tempCov = new Coverage();
 		tempCov.accumulate(covReport.getClassCounter().getMissedCount(), covReport.getClassCounter().getCoveredCount());
 		reportToSet.clazz = tempCov;
-		
+
 		tempCov = new Coverage();
 		tempCov.accumulate(covReport.getBranchCounter().getMissedCount(), covReport.getBranchCounter().getCoveredCount());
 		reportToSet.branch = tempCov;
-		
+
 		tempCov = new Coverage();
 		tempCov.accumulate(covReport.getLineCounter().getMissedCount(), covReport.getLineCounter().getCoveredCount());
 		reportToSet.line = tempCov;
-		
+
 		tempCov = new Coverage();
 		tempCov.accumulate(covReport.getInstructionCounter().getMissedCount(), covReport.getInstructionCounter().getCoveredCount());
 		reportToSet.instruction = tempCov;
-		
+
 		tempCov = new Coverage();
 		tempCov.accumulate(covReport.getMethodCounter().getMissedCount(), covReport.getMethodCounter().getCoveredCount());
 		reportToSet.method = tempCov;
-		
+
 		tempCov = new Coverage();
 		tempCov.accumulate(covReport.getComplexityCounter().getMissedCount(), covReport.getComplexityCounter().getCoveredCount());
 		reportToSet.complexity = tempCov;
-		
+
 	}
-	
+
 	public  < ReportLevel extends AggregatedReport<?,?,?> > void setCoverage( ReportLevel reportToSet, ICoverageNode covReport) {
-		
+
 		setAllCovTypes(reportToSet, covReport);
-		
+
 		if (this.maxClazz < reportToSet.clazz.getTotal()) {
 			this.maxClazz = reportToSet.clazz.getTotal();
 		}
-		
+
 		if (this.maxBranch < reportToSet.branch.getTotal()) {
 			this.maxBranch = reportToSet.branch.getTotal();
 		}
@@ -346,7 +333,7 @@ public abstract class CoverageObject<SELF extends CoverageObject<SELF>> {
 		if (this.maxLine < reportToSet.line.getTotal()) {
 			this.maxLine = reportToSet.line.getTotal();
 		}
-		
+
 		if (this.maxInstruction < reportToSet.instruction.getTotal()) {
 			this.maxInstruction = reportToSet.instruction.getTotal();
 		}
@@ -381,13 +368,24 @@ public abstract class CoverageObject<SELF extends CoverageObject<SELF>> {
 		int width = (w != null) ? Integer.parseInt(w) : 500;
 		int height = (h != null) ? Integer.parseInt(h) : 200;
 
-		CoverageGraphLayout layout = new CoverageGraphLayout()
-				.baseStroke(4f)
-				.axis()
-				.plot().type(CoverageType.LINE).value(CoverageValue.MISSED).color(Color.RED)
-				.plot().type(CoverageType.LINE).value(CoverageValue.COVERED).color(Color.GREEN);
+		CoverageGraphLayout layout = this.createLayout();
 
 		createGraph(t, width, height,layout).doPng(req, rsp);
+	}
+
+	private CoverageGraphLayout createLayout() {
+	   return new CoverageGraphLayout()
+               .baseStroke(4f)
+               .axis()
+               .plot().type(CoverageType.LINE).value(CoverageValue.MISSED).color(Color.RED)
+               .plot().type(CoverageType.LINE).value(CoverageValue.COVERED).color(Color.GREEN);
+	}
+
+	public GraphImpl getGraph(int width, int height) throws IOException {
+	    final Run<?,?> build = getBuild();
+        final Calendar t = build.getTimestamp();
+
+	    return createGraph(t, width, height, this.createLayout());
 	}
 
 	GraphImpl createGraph(final Calendar t, final int width, final int height, final CoverageGraphLayout layout) throws IOException
@@ -434,11 +432,13 @@ public abstract class CoverageObject<SELF extends CoverageObject<SELF>> {
 		return new Api(this);
 	}
 
-	abstract class GraphImpl extends Graph {
+	public abstract class GraphImpl extends Graph {
 
 		private CoverageObject<SELF> obj;
 		private CoverageGraphLayout layout;
 		protected Map<Axis,Bounds> bounds = new HashMap<>();
+		private int width;
+		private int height;
 
 		protected class Bounds
 		{
@@ -457,6 +457,8 @@ public abstract class CoverageObject<SELF extends CoverageObject<SELF>> {
 			super(timestamp, defaultW, defaultH);
 			this.obj = obj;
 			this.layout =layout;
+			this.width = defaultW;
+			this.height = defaultH;
 		}
 
 		protected abstract Map<Axis, DataSetBuilder<String, NumberOnlyBuildLabel>> createDataSetBuilder(CoverageObject<SELF> obj);
@@ -464,6 +466,13 @@ public abstract class CoverageObject<SELF extends CoverageObject<SELF>> {
 		public JFreeChart getGraph( )
 		{
 			return createGraph();
+		}
+
+		public String getGraphAsBase64() throws IOException {
+		    final JFreeChart chart = createGraph();
+		    final byte[] raw = ChartUtilities.encodeAsPNG(chart.createBufferedImage(this.width, this.height));
+
+		    return new String(Base64.getEncoder().encode(raw));
 		}
 
 		@Override

@@ -85,7 +85,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 				null, null, null, null,
 				null, null, null, null,
 				null, null, null, null,
-				false, null, null, null, null, null, null, false);
+				false, null, null, null, null, null, null, false, false);
 		assertNotNull(publisher.toString());
 	}
 
@@ -573,7 +573,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		JacocoPublisher publisher = new JacocoPublisher("**/**.exec", "**/classes", "**/src/main/java", "", "", false, false, false, "0", "0"
 				, "0", "0", "0", "0", "0", "0"
 				, "0", "0", "0", "0", false,
-				"10.564", "5.65", "9.995", "11.4529", "9.346", "5.237", true);
+				"10.564", "5.65", "9.995", "11.4529", "9.346", "5.237", true, false);
 		publisher.perform(run, filePath, launcher, taskListener);
 
 		assertNotNull(buildAction.get());

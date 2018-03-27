@@ -78,6 +78,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
     private boolean skipCopyOfSrcFiles; // Added for enabling/disabling copy of source files
     private boolean removeOriginalExecFiles;
     private boolean symbolicLinks;
+    private boolean staticReports;
 
     private String minimumInstructionCoverage;
     private String minimumBranchCoverage;
@@ -139,6 +140,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
         this.deltaMethodCoverage = "0";
         this.deltaClassCoverage = "0";
         this.buildOverBuild = false;
+        this.staticReports = false;
     }
 
 	/**
@@ -171,12 +173,13 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
 	 * @param deltaMethodCoverage deprecated
 	 * @param deltaClassCoverage deprecated
 	 * @param buildOverBuild deprecated
+	 * @param staticReports deprecated
      */
     @Deprecated
     public JacocoPublisher(String execPattern, String classPattern, String sourcePattern, String inclusionPattern, String exclusionPattern, boolean skipCopyOfSrcFiles, boolean removeOriginalExecFiles, boolean symbolicLinks, String maximumInstructionCoverage, String maximumBranchCoverage
     		, String maximumComplexityCoverage, String maximumLineCoverage, String maximumMethodCoverage, String maximumClassCoverage, String minimumInstructionCoverage, String minimumBranchCoverage
     		, String minimumComplexityCoverage, String minimumLineCoverage, String minimumMethodCoverage, String minimumClassCoverage, boolean changeBuildStatus,
-                           String deltaInstructionCoverage, String deltaBranchCoverage, String deltaComplexityCoverage, String deltaLineCoverage, String deltaMethodCoverage, String deltaClassCoverage, boolean buildOverBuild) {
+                           String deltaInstructionCoverage, String deltaBranchCoverage, String deltaComplexityCoverage, String deltaLineCoverage, String deltaMethodCoverage, String deltaClassCoverage, boolean buildOverBuild, boolean staticReports) {
     	this.execPattern = execPattern;
     	this.classPattern = classPattern;
     	this.sourcePattern = sourcePattern;
@@ -205,6 +208,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
         this.deltaMethodCoverage = deltaMethodCoverage;
         this.deltaClassCoverage = deltaClassCoverage;
         this.buildOverBuild = buildOverBuild;
+        this.staticReports = staticReports;
     }
 
     private Integer convertThresholdInputToInteger(String input, EnvVars env) {
@@ -248,6 +252,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
                 + ", skipCopyOfSrcFiles=" + skipCopyOfSrcFiles
                 + ", removeOriginalExecFiles=" + removeOriginalExecFiles
                 + ", symbolicLinks=" + symbolicLinks
+                + ", staticReports=" + staticReports
                 + "]";
 	}
 
@@ -393,6 +398,10 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
         return buildOverBuild;
     }
 
+    public boolean getStaticReports() {
+        return staticReports;
+    }
+
     @DataBoundSetter
     public void setExecPattern(String execPattern) {
         this.execPattern = execPattern;
@@ -534,6 +543,10 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
         this.buildOverBuild = buildOverBuild;
     }
 
+    @DataBoundSetter
+    public void setStaticReports(boolean staticReports) {
+        this.staticReports = staticReports;
+    }
 
 	protected static void saveCoverageReports(FilePath destFolder, FilePath sourceFolder) throws IOException, InterruptedException {
 		destFolder.mkdirs();
@@ -724,6 +737,12 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
             }
             if(changeBuildStatus || buildOverBuild) {
                 run.setResult(Utils.applyLogicalAnd(applyMinMaxTh, applyDeltaTh));
+            }
+            if(staticReports) {
+                // TODO: write html files here...
+                logger.println("[JaCoCo plugin] Generating HTML report...");
+                action.generateHtmlReport(new File(reportDir.getRootDir(), "report"));
+                logger.println("[JaCoCo plugin] done!");
             }
         }
     }

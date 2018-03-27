@@ -78,7 +78,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 	 */
 	public CoverageReport(JacocoBuildAction action, @Nonnull ExecutionFileLoader executionFileLoader ) {
 		this(action);
-		action.getLogger().println("[JaCoCo plugin] Loading packages..");
+		// action.getLogger().println("[JaCoCo plugin] Loading packages..");
 
 		if (executionFileLoader.getBundleCoverage() !=null ) {
 			setAllCovTypes(this, executionFileLoader.getBundleCoverage());
@@ -140,7 +140,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 				action.getLogger().println("[JaCoCo plugin] " + e.getMessage());
 			}
 		}
-		action.getLogger().println("[JaCoCo plugin] Done.");
+		// action.getLogger().println("[JaCoCo plugin] Done.");
 	}
 
     /**
@@ -214,7 +214,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
     static final NumberFormat percentFormat = new DecimalFormat("0.0", new DecimalFormatSymbols(Locale.US));
 
 	@Override
-	protected void printRatioCell(boolean failed, Coverage ratio, StringBuilder buf) {
+	public void printRatioCell(boolean failed, Coverage ratio, StringBuilder buf) {
 		if (ratio != null && ratio.isInitialized()) {
 			String bgColor = "#FFFFFF";
 

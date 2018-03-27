@@ -1,5 +1,6 @@
 package hudson.plugins.jacoco;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
@@ -17,6 +18,8 @@ import org.jacoco.core.analysis.IBundleCoverage;
 import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.StaplerProxy;
 
+import com.google.common.io.Files;
+
 import hudson.model.AbstractBuild;
 import hudson.model.Action;
 import hudson.model.HealthReport;
@@ -29,6 +32,7 @@ import hudson.plugins.jacoco.model.CoverageElement;
 import hudson.plugins.jacoco.model.CoverageElement.Type;
 import hudson.plugins.jacoco.model.CoverageObject;
 import hudson.plugins.jacoco.report.CoverageReport;
+import hudson.plugins.jacoco.report.PackageReport;
 import jenkins.model.RunAction2;
 import jenkins.tasks.SimpleBuildStep.LastBuildAction;
 
@@ -98,6 +102,7 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 		if (r == null) {
 			r = new Coverage();
 		}
+
 		return r;
 	}
 
@@ -111,6 +116,11 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 
 	public String getUrlName() {
 		return "jacoco";
+	}
+
+	@Override
+	public CoverageObject<JacocoBuildAction> getParent() {
+	    return this;
 	}
 
 
@@ -401,4 +411,214 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 	public Collection<? extends Action> getProjectActions() {
 		return jacocoProjectAction != null ? Collections.singletonList(jacocoProjectAction) : Collections.emptyList();
 	}
+
+    public static String getHtmlHeader(final String title) {
+        final StringBuilder buffer = new StringBuilder();
+
+        buffer.append("<!DOCTYPE html>\n");
+        buffer.append("<html>\n");
+        buffer.append("<head>\n");
+        //buffer.append("\t<meta charset='UTF-8'>\n");
+        buffer.append("\t<title>JaCoCo Coverage Report</title>\n");
+        buffer.append("\t<style>\n");
+        buffer.append("table.source {\r\n" +
+                "    border-style: solid;\r\n" +
+                "    border-color: #bbb;\r\n" +
+                "    border-spacing: 0;\r\n" +
+                "    /*border-collapse: collapse;*/\r\n" +
+                "    /*width: 100%;*/\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "body {\r\n" +
+                "    font-family: Helvetica, Arial, sans-seif;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "table.source .text {\r\n" +
+                "    margin-top: -1px;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "table.source th {\r\n" +
+                "    padding-left: 0.5em;\r\n" +
+                "    font-weight: bold;\r\n" +
+                "    background-color: #f0f0f0;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                ".nowrap {\r\n" +
+                "  white-space: nowrap;\r\n" +
+                "}\r\n" +
+                ".red {\r\n" +
+                "  background-color: red;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "\r\n" +
+                "div.percentgraph {\r\n" +
+                "  background-color: #80ff80;\r\n" +
+                "  border: #808080 0px solid;\r\n" +
+                "  height: 1.3em;\r\n" +
+                "  margin: 0px;\r\n" +
+                "  padding: 0px;\r\n" +
+                " /* width: 100px;*/\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "div.percentgraph div.greenbar {\r\n" +
+                "  background-color: #80ff80;\r\n" +
+                "  height: 1.3em;\r\n" +
+                "  margin: 0px;\r\n" +
+                "  padding: 0px;\r\n" +
+                "}\r\n" +
+                "div.percentgraph div.redbar {\r\n" +
+                "  background-color: #ff9090;\r\n" +
+                "  height: 1.3em;\r\n" +
+                "  margin: 0px;\r\n" +
+                "  padding: 0px;\r\n" +
+                "  float: right;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "div.percentgraph div.na {\r\n" +
+                "  background-color: #eaeaea;\r\n" +
+                "  height: 1.3em;\r\n" +
+                "  margin: 0px;\r\n" +
+                "  padding: 0px;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "div.percentgraph span.text {\r\n" +
+                "  display: block;\r\n" +
+                "  text-align: center;\r\n" +
+                "  position: absolute;\r\n" +
+                "  width: 100px;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "table.percentgraph {\r\n" +
+                "  border: 0px;\r\n" +
+                "  font-size: 100%;\r\n" +
+                "  margin: 0px;\r\n" +
+                "  margin-left: 0px;\r\n" +
+                "  margin-right: 0px;\r\n" +
+                "  padding: 0px;\r\n" +
+                "  text-align: left;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "table.percentgraph tr.percentgraph {\r\n" +
+                "  border: 0px;\r\n" +
+                "  margin: 0px;\r\n" +
+                "  padding: 0px;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "table.percentgraph td.percentgraph {\r\n" +
+                "  border: 0px;\r\n" +
+                "  margin: 0px;\r\n" +
+                "  padding: 0px;\r\n" +
+                "  padding-left: 4px;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "table.percentgraph td.data {\r\n" +
+                "    padding-top: 3px;\r\n" +
+                "    padding-bottom: 0px;\r\n" +
+                "    text-align: right;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "table.html-report {\r\n" +
+                "    width: 100%;\r\n" +
+                "    border: 1px #bbb solid;\r\n" +
+                "    border-collapse: collapse;\r\n" +
+                "    padding: 2px;\r\n" +
+                "}\r\n" +
+                "\r\n" +
+                "table.html-report > td, th {\r\n" +
+                "    border: 1px black solid;\r\n" +
+                "}");
+
+        buffer.append("\t</style>\n");
+        buffer.append("</head>\n");
+        buffer.append("<body>\n");
+
+        return buffer.toString();
+    }
+
+    public static String getHtmlFooter() {
+        final StringBuilder buffer = new StringBuilder();
+
+        buffer.append("</body>\n");
+        buffer.append("</html>\n");
+
+        return buffer.toString();
+    }
+
+    @Override
+    public String printFourCoverageColumns() {
+        final StringBuilder buffer = new StringBuilder();
+        final Map<Coverage, Boolean> ratios = this.getCoverageRatios();
+
+        ratios.forEach((coverage, failed) -> {
+            printRatioCell(failed, coverage, buffer);
+        });
+
+        return buffer.toString();
+    }
+
+    public static String getCaptionLine() {
+        final StringBuilder buffer = new StringBuilder();
+        buffer.append("<tr>\n");
+        buffer.append("<th style=\"background-color:#e0e0e0;\">name</th>\n");
+        buffer.append("<th style=\"background-color:#e0e0e0;\">instruction</th>");
+        buffer.append("<th style=\"background-color:#e0e0e0;\">branch</th>");
+        buffer.append("<th style=\"background-color:#e0e0e0;\">complexity</th>");
+        buffer.append("<th style=\"background-color:#e0e0e0;\">line</th>");
+        buffer.append("<th style=\"background-color:#e0e0e0;\">method</th>");
+        buffer.append("<th style=\"background-color:#e0e0e0;\">class</th>");
+        buffer.append("</tr>\n");
+
+        return buffer.toString();
+    }
+
+    public void generateHtmlReport(final File reportDirectory) throws IOException {
+        if (!reportDirectory.exists()) {
+            reportDirectory.mkdirs();
+        }
+
+        final String title = this.getBuild().getDisplayName();
+
+        final StringBuilder buffer = new StringBuilder();
+        buffer.append(getHtmlHeader(title));
+
+        final GraphImpl trend = this.getGraph(500, 200);
+        buffer.append("<h1>JaCoCo Coverage Report: ").append(title).append("</h1>\n");
+        buffer.append("<h2>Trend</h2>");
+        buffer.append("<img src=\"data:image/png;base64, ").append(trend.getGraphAsBase64()).append("\"/>\n");
+
+        buffer.append("<h2>Overall Coverage Summary</h2>\n");
+        buffer.append("<table border=\"1px\" class=\"html-report\">\n");
+        buffer.append(getCaptionLine());
+        buffer.append("<tr>\n");
+        buffer.append("<td>all classes</td>\n");
+        buffer.append(this.printFourCoverageColumns());
+        buffer.append("</tr>\n");
+        buffer.append("</table>\n");
+
+        buffer.append("<h2>Coverage Breakdown by Package</h2>\n");
+
+        final Map<String, PackageReport> packages = this.report.get().getChildren();
+
+        buffer.append("<table border=\"1px\" class=\"html-report\">\n");
+        buffer.append(getCaptionLine());
+        packages.forEach((name, report) -> {
+            buffer.append("<tr>\n");
+            buffer.append("<td class=\"nowrap");
+            if (report.isFailed()) {
+                buffer.append(" red");
+            }
+            buffer.append("\">");
+            //buffer.append("<a href=\"").append(report.getName()).append(".html\">");
+            buffer.append(report.getName());
+            //buffer.append("</a>");
+            buffer.append("</td>\n");
+            buffer.append(report.printFourCoverageColumns());
+            buffer.append("</tr>\n");
+        });
+        buffer.append("</table>\n");
+
+        buffer.append(getHtmlFooter());
+
+        Files.write(buffer.toString().getBytes(), new File(reportDirectory, "index.html"));
+    }
 }

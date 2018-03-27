@@ -27,6 +27,10 @@ public class JacocoReportDir {
         root = new File(rootDir, "jacoco");
     }
 
+    public File getRootDir() {
+        return this.root;
+    }
+
     /**
      * Where we store *.class files, honoring package names as directories.
      * @return Directory to which we store *.class files, honoring package names as directories.
