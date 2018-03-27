@@ -81,7 +81,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
     @SuppressWarnings("deprecation")
 	@Test
 	public void testConstruct() {
-		JacocoPublisher publisher = new JacocoPublisher(null, null, null, null, null, false, false,
+		JacocoPublisher publisher = new JacocoPublisher(null, null, null, null, null, false, false, false,
 				null, null, null, null,
 				null, null, null, null,
 				null, null, null, null,
@@ -152,6 +152,9 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 
 		publisher.setRemoveOriginalExecFiles(true);
 		assertEquals(true, publisher.getRemoveOriginalExecFiles());
+
+		publisher.setSymbolicLinks(true);
+		assertEquals(true, publisher.getSymbolicLinks());
 
 		assertNotNull(publisher.toString());
 
@@ -567,7 +570,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		PowerMock.replay(taskListener, run, job);
 
 		// execute
-		JacocoPublisher publisher = new JacocoPublisher("**/**.exec", "**/classes", "**/src/main/java", "", "", false, false, "0", "0"
+		JacocoPublisher publisher = new JacocoPublisher("**/**.exec", "**/classes", "**/src/main/java", "", "", false, false, false, "0", "0"
 				, "0", "0", "0", "0", "0", "0"
 				, "0", "0", "0", "0", false,
 				"10.564", "5.65", "9.995", "11.4529", "9.346", "5.237", true);

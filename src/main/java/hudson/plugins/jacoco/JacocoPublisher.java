@@ -77,6 +77,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
     private String exclusionPattern;
     private boolean skipCopyOfSrcFiles; // Added for enabling/disabling copy of source files
     private boolean removeOriginalExecFiles;
+    private boolean symbolicLinks;
 
     private String minimumInstructionCoverage;
     private String minimumBranchCoverage;
@@ -117,6 +118,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
         this.exclusionPattern = "";
         this.skipCopyOfSrcFiles = false;
         this.removeOriginalExecFiles = false;
+        this.symbolicLinks = false;
         this.minimumInstructionCoverage = "0";
         this.minimumBranchCoverage = "0";
         this.minimumComplexityCoverage = "0";
@@ -148,6 +150,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
 	 * @param exclusionPattern deprecated
 	 * @param skipCopyOfSrcFiles deprecated
 	 * @param removeOriginalExecFiles deprecated
+	 * @param symbolicLinks deprecated
 	 * @param maximumInstructionCoverage deprecated
 	 * @param maximumBranchCoverage deprecated
 	 * @param maximumComplexityCoverage deprecated
@@ -170,7 +173,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
 	 * @param buildOverBuild deprecated
      */
     @Deprecated
-    public JacocoPublisher(String execPattern, String classPattern, String sourcePattern, String inclusionPattern, String exclusionPattern, boolean skipCopyOfSrcFiles, boolean removeOriginalExecFiles, String maximumInstructionCoverage, String maximumBranchCoverage
+    public JacocoPublisher(String execPattern, String classPattern, String sourcePattern, String inclusionPattern, String exclusionPattern, boolean skipCopyOfSrcFiles, boolean removeOriginalExecFiles, boolean symbolicLinks, String maximumInstructionCoverage, String maximumBranchCoverage
     		, String maximumComplexityCoverage, String maximumLineCoverage, String maximumMethodCoverage, String maximumClassCoverage, String minimumInstructionCoverage, String minimumBranchCoverage
     		, String minimumComplexityCoverage, String minimumLineCoverage, String minimumMethodCoverage, String minimumClassCoverage, boolean changeBuildStatus,
                            String deltaInstructionCoverage, String deltaBranchCoverage, String deltaComplexityCoverage, String deltaLineCoverage, String deltaMethodCoverage, String deltaClassCoverage, boolean buildOverBuild) {
@@ -181,6 +184,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
     	this.exclusionPattern = exclusionPattern;
         this.skipCopyOfSrcFiles = skipCopyOfSrcFiles;
         this.removeOriginalExecFiles = removeOriginalExecFiles;
+        this.symbolicLinks = symbolicLinks;
     	this.minimumInstructionCoverage = minimumInstructionCoverage;
     	this.minimumBranchCoverage = minimumBranchCoverage;
     	this.minimumComplexityCoverage = minimumComplexityCoverage;
@@ -243,6 +247,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
                 + ", buildOverBuild=" + buildOverBuild
                 + ", skipCopyOfSrcFiles=" + skipCopyOfSrcFiles
                 + ", removeOriginalExecFiles=" + removeOriginalExecFiles
+                + ", symbolicLinks=" + symbolicLinks
                 + "]";
 	}
 
@@ -274,6 +279,10 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
 
     public boolean getRemoveOriginalExecFiles() {
         return removeOriginalExecFiles;
+    }
+
+    public boolean getSymbolicLinks() {
+        return symbolicLinks;
     }
 
 	public String getMinimumInstructionCoverage() {
@@ -407,6 +416,11 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
     @DataBoundSetter
     public void setRemoveOriginalExecFiles(boolean removeOriginalExecFiles) {
         this.removeOriginalExecFiles = removeOriginalExecFiles;
+    }
+
+    @DataBoundSetter
+    public void setSymbolicLinks(boolean symbolicLinks) {
+        this.symbolicLinks = symbolicLinks;
     }
 
     @DataBoundSetter
@@ -618,22 +632,46 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
         if (hasSubDirectories(classPattern)) {
             logger.print(warning);
         }
+
+        int noOfSymbolicLinks = 0;
         for (FilePath dir : matchedClassDirs) {
-            int copied = reportDir.saveClassesFrom(dir, "**/*.class");
-            logger.print("\n[JaCoCo plugin]  - " + dir + " " + copied + " files");
+            if (this.symbolicLinks) {
+                reportDir.symlinkClassesFrom(dir, classPattern, taskListener);
+                noOfSymbolicLinks++;
+            } else {
+                int copied = reportDir.saveClassesFrom(dir, "**/*.class");
+                logger.print("\n[JaCoCo plugin]  - " + dir + " " + copied + " files");
+            }
+        }
+
+        if (noOfSymbolicLinks > 0) {
+            logger.println("\n[JaCoCo plugin] - created " + noOfSymbolicLinks + " symbolic links in " + reportDir.getClassesDir());
         }
 
         // Use skipCopyOfSrcFiles flag to determine if the source files should be copied or skipped. If skipped display appropriate logger message.
         if(!this.skipCopyOfSrcFiles) {
             FilePath[] matchedSrcDirs = resolveDirPaths(filePath, taskListener, sourcePattern);
             logger.print("\n[JaCoCo plugin] Saving matched source directories for source-pattern: " + sourcePattern + ": ");
-            if (hasSubDirectories(sourcePattern)) logger.print(warning);
-            for (FilePath dir : matchedSrcDirs) {
-                int copied = reportDir.saveSourcesFrom(dir, "**/*.java");
-                logger.print("\n[JaCoCo plugin] - " + dir + " " + copied + " files");
+            if (hasSubDirectories(sourcePattern)) {
+                logger.print(warning);
             }
-        }
-        else{
+
+            noOfSymbolicLinks = 0;
+
+            for (FilePath dir : matchedSrcDirs) {
+                if (this.symbolicLinks && !dir.isRemote()) {
+                    reportDir.symlinkSourcesFrom(dir, sourcePattern, taskListener);
+                    noOfSymbolicLinks++;
+                } else {
+                    int copied = reportDir.saveSourcesFrom(dir, "**/*.java");
+                    logger.print("\n[JaCoCo plugin] - " + dir + " " + copied + " files");
+                }
+            }
+
+            if (noOfSymbolicLinks > 0) {
+                logger.println("[JaCoCo plugin] - created " + noOfSymbolicLinks + " symbolic links in " + reportDir.getSourcesDir());
+            }
+        } else {
             logger.print("\n[JaCoCo plugin] Skipping save of matched source directories for source-pattern: " + sourcePattern);
         }
 
