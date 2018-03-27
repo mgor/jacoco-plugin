@@ -32,7 +32,7 @@ import hudson.util.HttpResponses;
 
 /**
  * Root object of the coverage report.
- * 
+ *
  * @author Kohsuke Kawaguchi
  * @author Ognjen Bubalo
  */
@@ -43,7 +43,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 		this.action = action;
 		setName("Jacoco");
 	}
-	
+
 //	private String instructionColor;
 //	private String classColor;
 //	private String branchColor;
@@ -54,13 +54,13 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 
 	/**
 	 * Loads the exec files using JaCoCo API. Creates the reporting objects and the report tree.
-	 * 
+	 *
 	 * @param action Jacoco build action
 	 * @param executionFileLoader execution file loader owning bundle coverage
 	 */
 	public CoverageReport(JacocoBuildAction action, @Nonnull ExecutionFileLoader executionFileLoader ) {
 		this(action);
-		action.getLogger().println("[JaCoCo plugin] Loading packages..");
+		// action.getLogger().println("[JaCoCo plugin] Loading packages..");
 
 		if (executionFileLoader.getBundleCoverage() !=null ) {
 			setAllCovTypes(this, executionFileLoader.getBundleCoverage());
@@ -98,12 +98,12 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 				this.add(packageReport);
 			}
 		}
-		action.getLogger().println("[JaCoCo plugin] Done.");
+		// action.getLogger().println("[JaCoCo plugin] Done.");
 	}
 
     /**
      * From Jacoco: Checks if a class name is anonymous or not.
-     * 
+     *
      * @param vmname
      * @return
      */
@@ -124,7 +124,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 
     /**
      * Returns a method name for the method, including possible parameter names.
-     * 
+     *
      * @param classCov
      *            Coverage Information about the Class
      * @param methodCov
@@ -140,14 +140,14 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
             if (isAnonymous(classCov.getName())) {
                 return "{...}";
             }
-            
+
             int pos = classCov.getName().lastIndexOf('/');
             String name = pos == -1 ? classCov.getName() : classCov.getName().substring(pos + 1);
             sb.append(name.replace('$', '.'));
         } else {
             sb.append(methodCov.getName());
         }
-        
+
         sb.append('(');
         final Type[] arguments = Type.getArgumentTypes(methodCov.getDesc());
         boolean comma = false;
@@ -157,7 +157,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
             } else {
                 comma = true;
             }
-            
+
             String name = arg.getClassName();
             int pos = name.lastIndexOf('.');
             String shortname = pos == -1 ? name : name.substring(pos + 1);
@@ -170,12 +170,12 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 
     static final NumberFormat dataFormat = new DecimalFormat("000.00", new DecimalFormatSymbols(Locale.US));
     static final NumberFormat percentFormat = new DecimalFormat("0.0", new DecimalFormatSymbols(Locale.US));
-	
+
 	@Override
-	protected void printRatioCell(boolean failed, Coverage ratio, StringBuilder buf) {
+	public void printRatioCell(boolean failed, Coverage ratio, StringBuilder buf) {
 		if (ratio != null && ratio.isInitialized()) {
 			String bgColor = "#FFFFFF";
-			
+
 			if (JacocoHealthReportThresholds.RESULT.BETWEENMINMAX == healthReports.getResultByTypeAndRatio(ratio)) {
 				bgColor = "#FF8000";
 			} else if (JacocoHealthReportThresholds.RESULT.BELOWMINIMUM == healthReports.getResultByTypeAndRatio(ratio)) {
@@ -188,7 +188,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 			buf.append("</td>\n");
 		}
 	}
-	
+
 	@Override
 	protected void printRatioTable(Coverage ratio, StringBuilder buf){
 		buf.append("<table class='percentgraph' cellpadding='0' cellspacing='0'><tr class='percentgraph'>")
@@ -208,7 +208,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 		if(prev!=null) {
 			return prev.getResult();
 		}
-		
+
 		return null;
 	}
 
@@ -219,7 +219,7 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 
     /**
      * Serves a single jacoco.exec file that merges all that have been recorded.
-     * @return HTTP response serving a single jacoco.exec file, or error 404 if nothing has been recorded. 
+     * @return HTTP response serving a single jacoco.exec file, or error 404 if nothing has been recorded.
      * @throws IOException if any I/O error occurs
      */
     @WebMethod(name="jacoco.exec")
