@@ -2,6 +2,7 @@ package hudson.plugins.jacoco.report;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import com.google.common.io.Files;
@@ -80,7 +81,7 @@ public final class PackageReport extends AggregatedReport<CoverageReport,Package
 
         buffer.append(JacocoBuildAction.getHtmlFooter());
 
-        Files.write(buffer.toString().getBytes(), new File(reportDirectory, String.format("%s.html", this.getName())));
+        Files.write(buffer.toString().getBytes(StandardCharsets.UTF_8), new File(reportDirectory, String.format("%s.html", this.getName())));
     }
 
 }

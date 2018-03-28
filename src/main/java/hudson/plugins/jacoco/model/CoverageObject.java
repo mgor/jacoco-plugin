@@ -16,6 +16,7 @@ import hudson.util.Graph;
 import hudson.util.ShiftedCategoryAxis;
 import java.awt.Color;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -472,7 +473,7 @@ public abstract class CoverageObject<SELF extends CoverageObject<SELF>> {
 		    final JFreeChart chart = createGraph();
 		    final byte[] raw = ChartUtilities.encodeAsPNG(chart.createBufferedImage(this.width, this.height));
 
-		    return new String(Base64.getEncoder().encode(raw));
+		    return new String(Base64.getEncoder().encode(raw), StandardCharsets.UTF_8);
 		}
 
 		@Override

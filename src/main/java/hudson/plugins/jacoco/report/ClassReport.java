@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 
 import org.jacoco.core.analysis.IClassCoverage;
 
@@ -83,6 +84,6 @@ public final class ClassReport extends AggregatedReport<PackageReport,ClassRepor
 
         buffer.append(JacocoBuildAction.getHtmlFooter());
 
-        Files.write(buffer.toString().getBytes(), new File(reportDirectory, String.format("%s.html", this.getName())));
+        Files.write(buffer.toString().getBytes(StandardCharsets.UTF_8), new File(reportDirectory, String.format("%s.html", this.getName())));
 	}
 }

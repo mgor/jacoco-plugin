@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -418,7 +419,7 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
         buffer.append("<!DOCTYPE html>\n");
         buffer.append("<html>\n");
         buffer.append("<head>\n");
-        //buffer.append("\t<meta charset='UTF-8'>\n");
+        buffer.append("\t<meta charset='UTF-8'>\n");
         buffer.append("\t<title>JaCoCo Coverage Report</title>\n");
         buffer.append("\t<style>\n");
         buffer.append("table.source {\r\n" +
@@ -573,7 +574,9 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 
     public void generateHtmlReport(final File reportDirectory) throws IOException {
         if (!reportDirectory.exists()) {
-            reportDirectory.mkdirs();
+            if(!reportDirectory.mkdirs()) {
+                throw new IOException(String.format("Unable to create %s", reportDirectory));
+            }
         }
 
         final String title = this.getBuild().getDisplayName();
@@ -597,28 +600,41 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 
         buffer.append("<h2>Coverage Breakdown by Package</h2>\n");
 
-        final Map<String, PackageReport> packages = this.report.get().getChildren();
-
         buffer.append("<table border=\"1px\" class=\"html-report\">\n");
         buffer.append(getCaptionLine());
-        packages.forEach((name, report) -> {
-            buffer.append("<tr>\n");
-            buffer.append("<td class=\"nowrap");
-            if (report.isFailed()) {
-                buffer.append(" red");
+
+        synchronized (this) {
+            if (this.report == null) {
+                throw new IOException("CoverageReport has been gc'd");
             }
-            buffer.append("\">");
-            //buffer.append("<a href=\"").append(report.getName()).append(".html\">");
-            buffer.append(report.getName());
-            //buffer.append("</a>");
-            buffer.append("</td>\n");
-            buffer.append(report.printFourCoverageColumns());
-            buffer.append("</tr>\n");
-        });
+
+            final CoverageReport coverageReport = this.report.get();
+
+            if (coverageReport == null) {
+                throw new IOException("CoverageReport has been gc'd");
+            }
+
+            final Map<String, PackageReport> packages = coverageReport.getChildren();
+
+            packages.forEach((name, report) -> {
+                buffer.append("<tr>\n");
+                buffer.append("<td class=\"nowrap");
+                if (report.isFailed()) {
+                    buffer.append(" red");
+                }
+                buffer.append("\">");
+                //buffer.append("<a href=\"").append(report.getName()).append(".html\">");
+                buffer.append(report.getName());
+                //buffer.append("</a>");
+                buffer.append("</td>\n");
+                buffer.append(report.printFourCoverageColumns());
+                buffer.append("</tr>\n");
+            });
+        }
         buffer.append("</table>\n");
 
         buffer.append(getHtmlFooter());
 
-        Files.write(buffer.toString().getBytes(), new File(reportDirectory, "index.html"));
+        Files.write(buffer.toString().getBytes(StandardCharsets.UTF_8), new File(reportDirectory, "index.html"));
     }
 }
