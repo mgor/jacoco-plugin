@@ -1,33 +1,18 @@
 package hudson.plugins.jacoco;
 
-import hudson.EnvVars;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.*;
-import hudson.plugins.jacoco.JacocoPublisher.DescriptorImpl;
-import org.easymock.IAnswer;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.powermock.api.easymock.PowerMock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicReference;
-
-import hudson.model.AbstractBuild;
-import hudson.model.Action;
-import hudson.model.Result;
-import hudson.model.Run;
-import hudson.model.TaskListener;
-import hudson.plugins.jacoco.report.ClassReport;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.BuildStepMonitor;
-import hudson.tasks.Publisher;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.getCurrentArguments;
+import static org.easymock.EasyMock.mock;
+import static org.easymock.EasyMock.niceMock;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,20 +28,31 @@ import org.jacoco.core.internal.analysis.ClassCoverageImpl;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.getCurrentArguments;
-import static org.easymock.EasyMock.mock;
-import static org.easymock.EasyMock.niceMock;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicReference;
+
+import hudson.EnvVars;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.Action;
+import hudson.model.Job;
+import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.plugins.jacoco.JacocoPublisher.DescriptorImpl;
+import hudson.plugins.jacoco.report.ClassReport;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Publisher;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(JacocoPublisher.class)
@@ -90,7 +86,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 	}
 
 	@Test
-	public void testGetterSetter() throws Exception {
+	public void testGetterSetter() {
 		JacocoPublisher publisher = new JacocoPublisher();
 		publisher.setChangeBuildStatus(true);
 		assertTrue(publisher.getChangeBuildStatus());
@@ -110,6 +106,12 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 
 		publisher.setSourcePattern("source");
 		assertEquals("source", publisher.getSourcePattern());
+
+		publisher.setSourceExclusionPattern("sourceExclusion");
+		assertEquals("sourceExclusion", publisher.getSourceExclusionPattern());
+
+		publisher.setSourceInclusionPattern("sourceInclusion");
+		assertEquals("sourceInclusion", publisher.getSourceInclusionPattern());
 
 		publisher.setMaximumBranchCoverage("maxB");
 		assertEquals("maxB", publisher.getMaximumBranchCoverage());
@@ -218,8 +220,10 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 
 		EasyMock.replay(run, listener);
 
+		//noinspection CatchMayIgnoreException
 		try {
 			publisher.resolveFilePaths(run, listener, "input${key}input", Collections.singletonMap("key", "value"));
+			fail("Should catch exception here");
 		} catch (RuntimeException e) {
 			assertTrue(e.getMessage().startsWith("Failed to resolve parameters"));
 		}
@@ -268,6 +272,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 
 		EasyMock.replay(build, listener);
 
+		//noinspection CatchMayIgnoreException
 		try {
 			publisher.resolveFilePaths(build, listener, "input${key}input");
 			fail();
@@ -339,36 +344,38 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		Action action = anyObject();
 		run.addAction(action);
 		final AtomicReference<JacocoBuildAction> buildAction = new AtomicReference<>();
-		expectLastCall().andAnswer(new IAnswer<Void>() {
-			@Override
-			public Void answer() throws Throwable {
-				buildAction.set((JacocoBuildAction) getCurrentArguments()[0]);
-				buildAction.get().onAttached(run);
+		expectLastCall().andAnswer((IAnswer<Void>) () -> {
+			buildAction.set((JacocoBuildAction) getCurrentArguments()[0]);
+			buildAction.get().onAttached(run);
 
-				return null;
-			}
+			return null;
 		});
 
         File dir = File.createTempFile("JaCoCoPublisherTest", ".tst");
         assertTrue(dir.delete());
         assertTrue(dir.mkdirs());
-        assertTrue(new File(dir, "jacoco/classes").mkdirs());
-        FilePath filePath = new FilePath(dir);
 
-        expect(run.getRootDir()).andReturn(dir).anyTimes();
+        try {
+			assertTrue(new File(dir, "jacoco/classes").mkdirs());
+			FilePath filePath = new FilePath(dir);
 
-		replay(taskListener, run);
+			expect(run.getRootDir()).andReturn(dir).anyTimes();
 
-		// execute
-		JacocoPublisher publisher = new JacocoPublisher();
-		publisher.perform(run, filePath, launcher, taskListener);
+			replay(taskListener, run);
 
-		assertNotNull(buildAction.get());
-		assertEquals(Result.SUCCESS, JacocoPublisher.checkResult(buildAction.get()));
+			// execute
+			JacocoPublisher publisher = new JacocoPublisher();
+			publisher.perform(run, filePath, launcher, taskListener);
 
-        assertNotNull(run.toString());
+			assertNotNull(buildAction.get());
+			assertEquals(Result.SUCCESS, JacocoPublisher.checkResult(buildAction.get()));
 
-        // verify
+			assertNotNull(run.toString());
+		} finally {
+        	FileUtils.deleteDirectory(dir);
+		}
+
+		// verify
 		verify(taskListener, run);
 	}
 
@@ -433,7 +440,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 	}
 
 	@Test
-	public void testCheckResult() throws Exception {
+	public void testCheckResult() {
 		TaskListener listener = TaskListener.NULL;
 		JacocoBuildAction action = new JacocoBuildAction(null, new JacocoHealthReportThresholds(), listener, null, null);
 
@@ -446,9 +453,8 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 
 	@Test
 	public void testSkipCopyOfSrcFilesTrue() throws IOException, InterruptedException{
-
 		final Run run = new RunBuilder().taskListener(taskListener).build();
-		FilePath workspace = new WorkspaceBuilder().name("workspace", ".tst")
+		FilePath workspace = new WorkspaceBuilder()
 				.file("classes/Test.class")
 				.file("src/main/java/Test.java")
 				.build();
@@ -462,13 +468,16 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		Assert.assertFalse(jacocoSrc.exists() && jacocoSrc.isDirectory());
 
 		verify(taskListener, run);
+
+		// clean up afterwards
+		FileUtils.deleteDirectory(run.getRootDir());
+		FileUtils.deleteDirectory(new File(workspace.getRemote()));
 	}
 
 	@Test
 	public void testSkipCopyOfSrcFilesFalse() throws IOException, InterruptedException{
-
 		final Run run = new RunBuilder().taskListener(taskListener).build();
-		FilePath workspace = new WorkspaceBuilder().name("workspace", ".tst")
+		FilePath workspace = new WorkspaceBuilder()
 				.file("classes/Test.class")
 				.file("src/main/java/Test.java")
 				.build();
@@ -481,22 +490,29 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		File jacocoSrc = new File(run.getRootDir(), "jacoco/sources");
 		assertTrue(jacocoSrc.exists() && jacocoSrc.isDirectory());
 		verify(taskListener, run);
+
+		// clean up afterwards
+		FileUtils.deleteDirectory(run.getRootDir());
+		FileUtils.deleteDirectory(new File(workspace.getRemote()));
 	}
 
 	@Test
 	public void testCopyClassAndSource() throws IOException, InterruptedException {
-
 		final Run run = new RunBuilder().taskListener(taskListener).build();
-		FilePath workspace = new WorkspaceBuilder().name("workspace", ".tst")
+		FilePath workspace = new WorkspaceBuilder()
 				.file("classes/Test.class")
 				.file("classes/Test.jar")
 				.file("classes/sub/Test2.class")
 				.file("src/main/java/Test.java")
+				.file("src/main/java/generated/bean.java")
+				.file("src/main/java/Test.groovy")
 				.file("src/main/java/test.png")
 				.build();
 
 		JacocoPublisher publisher = new JacocoPublisher();
 		publisher.setClassPattern("**/classes");
+		publisher.setSourceInclusionPattern("**/*.java,**/*.groovy");
+		publisher.setSourceExclusionPattern("generated/**/*");
 		publisher.perform(run, workspace, launcher, taskListener);
 
 		assertTrue(new File(run.getRootDir(), "jacoco/classes/Test.class").exists());
@@ -504,15 +520,20 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		assertTrue(new File(run.getRootDir(), "jacoco/classes/sub/Test2.class").exists());
 		assertFalse(new File(run.getRootDir(), "jacoco/classes/Test2.class").exists());
 		assertTrue(new File(run.getRootDir(), "jacoco/sources/Test.java").exists());
+		assertTrue(new File(run.getRootDir(), "jacoco/sources/Test.groovy").exists());
+		assertFalse(new File(run.getRootDir(), "jacoco/sources/generated/bean.java").exists());
 		assertFalse(new File(run.getRootDir(), "jacoco/sources/test.png").exists());
 		verify(taskListener, run);
+
+		// clean up afterwards
+		FileUtils.deleteDirectory(run.getRootDir());
+		FileUtils.deleteDirectory(new File(workspace.getRemote()));
 	}
 
 	@Test
 	public void testCopyClass_Wrong() throws IOException, InterruptedException {
-
 		final Run run = new RunBuilder().taskListener(taskListener).build();
-		FilePath workspace = new WorkspaceBuilder().name("workspace", ".tst")
+		FilePath workspace = new WorkspaceBuilder()
 				.file("classes/Test.class")
 				.file("classes/Test.jar")
 				.file("classes/sub/Test2.class")
@@ -531,6 +552,10 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		assertTrue(logContent.toString().replace("\\","/").contains("tst/classes 2 files"));
 		assertTrue(logContent.toString().replace("\\","/").contains("tst/classes/sub 1 files"));
 		verify(taskListener, run);
+
+		// clean up afterwards
+		FileUtils.deleteDirectory(run.getRootDir());
+		FileUtils.deleteDirectory(new File(workspace.getRemote()));
 	}
 
 	// Test perform with build over build feature turned ON
@@ -545,15 +570,12 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		expect(run.getEnvironment(taskListener)).andReturn(new EnvVars()).anyTimes();
 		Action action = anyObject();
 		run.addAction(action);
-		final AtomicReference<JacocoBuildAction> buildAction = new AtomicReference<JacocoBuildAction>();
-		expectLastCall().andAnswer(new IAnswer<Void>() {
-			@Override
-			public Void answer() throws Throwable {
-				buildAction.set((JacocoBuildAction) getCurrentArguments()[0]);
-				buildAction.get().onAttached(run);
+		final AtomicReference<JacocoBuildAction> buildAction = new AtomicReference<>();
+		expectLastCall().andAnswer((IAnswer<Void>) () -> {
+			buildAction.set((JacocoBuildAction) getCurrentArguments()[0]);
+			buildAction.get().onAttached(run);
 
-				return null;
-			}
+			return null;
 		});
 
 		File dir = File.createTempFile("JaCoCoPublisherTest", ".tst");
@@ -562,25 +584,28 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		assertTrue(new File(dir, "jacoco/classes").mkdirs());
 		FilePath filePath = new FilePath(dir);
 
-		expect(run.getRootDir()).andReturn(dir).anyTimes();
-		expect(run.getParent()).andReturn(job).anyTimes();
-		expect(job.getLastSuccessfulBuild()).andReturn(run).anyTimes();
+        try {
+            expect(run.getRootDir()).andReturn(dir).anyTimes();
+            expect(run.getParent()).andReturn(job).anyTimes();
+            expect(job.getLastSuccessfulBuild()).andReturn(run).anyTimes();
 
 
-		PowerMock.replay(taskListener, run, job);
+            PowerMock.replay(taskListener, run, job);
 
-		// execute
-		JacocoPublisher publisher = new JacocoPublisher("**/**.exec", "**/classes", "**/src/main/java", "", "", false, false, false, "0", "0"
-				, "0", "0", "0", "0", "0", "0"
-				, "0", "0", "0", "0", false,
-				"10.564", "5.65", "9.995", "11.4529", "9.346", "5.237", true, false);
-		publisher.perform(run, filePath, launcher, taskListener);
+            // execute
+            JacocoPublisher publisher = new JacocoPublisher("**/**.exec", "**/classes", "**/src/main/java", "", "", false, false, false, "0", "0"
+                    , "0", "0", "0", "0", "0", "0"
+                    , "0", "0", "0", "0", false,
+                    "10.564", "5.65", "9.995", "11.4529", "9.346", "5.237", true, false);
+            publisher.perform(run, filePath, launcher, taskListener);
 
-		assertNotNull(buildAction.get());
-		assertEquals("Build over build result", "SUCCESS", publisher.checkBuildOverBuildResult(run, taskListener.getLogger()).toString());
+            assertNotNull(buildAction.get());
+            assertEquals("Build over build result", "SUCCESS", publisher.checkBuildOverBuildResult(run, taskListener.getLogger()).toString());
+        } finally {
+            FileUtils.deleteDirectory(dir)
+        }
 
 		// verify
 		PowerMock.verify(taskListener, run, job);
 	}
-
 }

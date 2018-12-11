@@ -112,7 +112,10 @@ public class ExecutionFileLoader implements Serializable {
 		}
 	    private IBundleCoverage analyzeStructure() throws IOException, InterruptedException {
 	    	
-			File classDirectory = new File(getCanonicalFilePath(this.classDir).getRemote());
+			File classDirectory = new File(classDir.getRemote());
+			if (!classDirectory.exists()) {
+				return null;
+			}
 			final CoverageBuilder coverageBuilder = new CoverageBuilder();
 			final Analyzer analyzer = new Analyzer(executionDataStore,
 					coverageBuilder);

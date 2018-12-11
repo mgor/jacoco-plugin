@@ -73,6 +73,8 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
     private String execPattern;
     private String classPattern;
     private String sourcePattern;
+    private String sourceInclusionPattern;
+    private String sourceExclusionPattern;
     private String inclusionPattern;
     private String exclusionPattern;
     private boolean skipCopyOfSrcFiles; // Added for enabling/disabling copy of source files
@@ -115,6 +117,8 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
         this.execPattern = "**/**.exec";
         this.classPattern = "**/classes";
         this.sourcePattern = "**/src/main/java";
+        this.sourceInclusionPattern = "**/*.java";
+        this.sourceExclusionPattern = "";
         this.inclusionPattern = "";
         this.exclusionPattern = "";
         this.skipCopyOfSrcFiles = false;
@@ -227,8 +231,11 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
 	@Override
 	public String toString() {
 		return "JacocoPublisher [execPattern=" + execPattern
-				+ ", classPattern=" + classPattern + ", sourcePattern="
-				+ sourcePattern + ", inclusionPattern=" + inclusionPattern
+				+ ", classPattern=" + classPattern
+				+ ", sourcePattern=" + sourcePattern
+				+ ", sourceExclusionPattern=" + sourceExclusionPattern
+				+ ", sourceInclusionPattern=" + sourceInclusionPattern
+				+ ", inclusionPattern=" + inclusionPattern
 				+ ", exclusionPattern=" + exclusionPattern
 				+ ", minimumInstructionCoverage=" + minimumInstructionCoverage
 				+ ", minimumBranchCoverage=" + minimumBranchCoverage
@@ -268,6 +275,13 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
 
 	public String getSourcePattern() {
 		return sourcePattern;
+	}
+
+	public String getSourceExclusionPattern() {
+		return sourceExclusionPattern;
+	}
+	public String getSourceInclusionPattern() {
+		return sourceInclusionPattern;
 	}
 
 	public String getInclusionPattern() {
@@ -415,6 +429,16 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
     @DataBoundSetter
     public void setSourcePattern(String sourcePattern) {
         this.sourcePattern = sourcePattern;
+    }
+
+    @DataBoundSetter
+    public void setSourceInclusionPattern(String sourceInclusionPattern) {
+        this.sourceInclusionPattern = sourceInclusionPattern;
+    }
+
+    @DataBoundSetter
+    public void setSourceExclusionPattern(String sourceExclusionPattern) {
+        this.sourceExclusionPattern = sourceExclusionPattern;
     }
 
     @DataBoundSetter
@@ -665,6 +689,9 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
         if(!this.skipCopyOfSrcFiles) {
             FilePath[] matchedSrcDirs = resolveDirPaths(filePath, taskListener, sourcePattern);
             logger.print("\n[JaCoCo plugin] Saving matched source directories for source-pattern: " + sourcePattern + ": ");
+            logger.print("\n[JaCoCo plugin] Source Inclusions: " + sourceInclusionPattern);
+            logger.print("\n[JaCoCo plugin] Source Exclusions: " + sourceExclusionPattern);
+
             if (hasSubDirectories(sourcePattern)) {
                 logger.print(warning);
             }
@@ -702,7 +729,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
             logger.println("[JaCoCo plugin] exclusions: " + Arrays.toString(excludes));
         }
 
-        final JacocoBuildAction action = JacocoBuildAction.load(run, healthReports, taskListener, reportDir, includes, excludes);
+        final JacocoBuildAction action = JacocoBuildAction.load(healthReports, taskListener, reportDir, includes, excludes);
         action.getThresholds().ensureValid();
         logger.println("[JaCoCo plugin] Thresholds: " + action.getThresholds());
         run.addAction(action);
@@ -718,7 +745,8 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
                     + ", method: " + result.getMethodCoverage().getPercentage()
                     + ", line: " + result.getLineCoverage().getPercentage()
                     + ", branch: " + result.getBranchCoverage().getPercentage()
-                    + ", instruction: " + result.getInstructionCoverage().getPercentage());
+                    + ", instruction: " + result.getInstructionCoverage().getPercentage()
+                    + ", complexity: " + result.getComplexityScore().getPercentage());
             result.setThresholds(healthReports);
 
             // Calculate final result of the current build according to the state of two flags: changeBuildStatus and buildOverBuild
@@ -839,7 +867,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
      */
     public static /*final*/ BuildStepDescriptor<Publisher> DESCRIPTOR;
 
-    private static final void setDescriptor(BuildStepDescriptor<Publisher> descriptor) {
+    private static void setDescriptor(BuildStepDescriptor<Publisher> descriptor) {
         DESCRIPTOR = descriptor;
     }
 
@@ -850,7 +878,8 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
             setDescriptor(this);
         }
 
-		@Override
+		@Nonnull
+        @Override
         public String getDisplayName() {
             return Messages.JacocoPublisher_DisplayName();
         }

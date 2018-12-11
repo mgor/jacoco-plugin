@@ -16,6 +16,7 @@ import hudson.FilePath;
 import hudson.model.Run;
 
 import org.apache.tools.ant.DirectoryScanner;
+import org.jacoco.core.analysis.IBundleCoverage;
 import org.jacoco.core.analysis.IClassCoverage;
 import org.jacoco.core.analysis.IMethodCoverage;
 import org.jacoco.core.analysis.IPackageCoverage;
@@ -80,14 +81,15 @@ public final class CoverageReport extends AggregatedReport<CoverageReport/*dummy
 		this(action);
 		// action.getLogger().println("[JaCoCo plugin] Loading packages..");
 
-		if (executionFileLoader.getBundleCoverage() !=null ) {
-			setAllCovTypes(this, executionFileLoader.getBundleCoverage());
+		IBundleCoverage bundleCoverage = executionFileLoader.getBundleCoverage();
+		if (bundleCoverage != null) {
+			setAllCovTypes(this, bundleCoverage);
 			try {
 				final FilePath srcDir = ExecutionFileLoader.getCanonicalFilePath(executionFileLoader.getSrcDir());
 				final List<String> srcMultipleMatches = new ArrayList<>();
 				final List<String> srcMissing = new ArrayList<>();
 
-				ArrayList<IPackageCoverage> packageList = new ArrayList<>(executionFileLoader.getBundleCoverage().getPackages());
+				ArrayList<IPackageCoverage> packageList = new ArrayList<>(bundleCoverage.getPackages());
 				for (IPackageCoverage packageCov: packageList) {
 					PackageReport packageReport = new PackageReport();
 					packageReport.setName(packageCov.getName());

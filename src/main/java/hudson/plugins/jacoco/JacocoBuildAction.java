@@ -314,12 +314,10 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 
 	/**
 	 * Constructs the object from JaCoCo exec files.
-	 * @param owner
-	 *            Not used
-     * @param thresholds
-     *            The thresholds that applied when this build was built.
-     * @param listener
-     *            The listener from which we get logger
+	 * @param thresholds
+	 *            The thresholds that applied when this build was built.
+	 * @param listener
+	 *            The listener from which we get logger
 	 * @param layout
 	 *             The object parsing the saved "jacoco.exec" files
      * @param includes
@@ -330,11 +328,8 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 	 * @throws IOException if failed to parse the file.
 	 * @throws InterruptedException if thread is interrupted
 	 */
-	public static JacocoBuildAction load(Run<?,?> owner, JacocoHealthReportThresholds thresholds, TaskListener listener, JacocoReportDir layout, String[] includes, String[] excludes) throws IOException, InterruptedException {
-		//PrintStream logger = listener.getLogger();
-		Map<CoverageElement.Type,Coverage> ratios = null;
-
-	    ratios = loadRatios(layout, ratios, includes, excludes);
+	public static JacocoBuildAction load(JacocoHealthReportThresholds thresholds, TaskListener listener, JacocoReportDir layout, String[] includes, String[] excludes) throws IOException {
+		Map<CoverageElement.Type,Coverage> ratios = loadRatios(layout, includes, excludes);
 		return new JacocoBuildAction(ratios, thresholds, listener, includes, excludes);
 	}
 
@@ -343,13 +338,14 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 	 * Extracts top-level coverage information from the JaCoCo report document.
 	 * @throws InterruptedException if thread is interrupted
 	 */
-	private static Map<Type, Coverage> loadRatios(JacocoReportDir layout, Map<Type, Coverage> ratios, String[] includes, String... excludes) throws IOException, InterruptedException {
-
-		if (ratios == null) {
-			ratios = new LinkedHashMap<CoverageElement.Type, Coverage>();
-		}
+	private static Map<Type, Coverage> loadRatios(JacocoReportDir layout, String[] includes, String... excludes) throws IOException {
+		Map<CoverageElement.Type,Coverage> ratios = new LinkedHashMap<>();
 		ExecutionFileLoader efl = layout.parse(includes, excludes);
         IBundleCoverage bundleCoverage = efl.getBundleCoverage();
+        if(bundleCoverage == null) {
+        	return null;
+		}
+
 		Coverage ratio = new Coverage();
 		ratio.accumulatePP(bundleCoverage.getClassCounter().getMissedCount(), bundleCoverage.getClassCounter().getCoveredCount());
 		ratios.put(CoverageElement.Type.CLASS, ratio);
