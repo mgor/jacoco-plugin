@@ -1,12 +1,7 @@
 package hudson.plugins.jacoco;
 
-import hudson.EnvVars;
-import hudson.FilePath;
-import hudson.Launcher;
 import hudson.model.*;
 import hudson.plugins.jacoco.portlet.bean.JacocoDeltaCoverageResultSummary;
-import hudson.plugins.jacoco.portlet.utils.Constants;
-import org.easymock.IAnswer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,14 +10,9 @@ import org.powermock.api.easymock.PowerMock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.easymock.EasyMock.*;
-import static org.junit.Assert.assertTrue;
 
 
 @RunWith(PowerMockRunner.class)

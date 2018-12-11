@@ -3,7 +3,6 @@ package hudson.plugins.jacococoveragecolumn;
 import hudson.model.Job;
 import hudson.model.Run;
 import hudson.plugins.jacoco.JacocoBuildAction;
-import hudson.plugins.jacoco.model.Coverage;
 import hudson.views.ListViewColumn;
 
 import java.awt.*;

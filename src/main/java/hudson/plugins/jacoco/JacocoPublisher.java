@@ -703,7 +703,7 @@ public class JacocoPublisher extends Recorder implements SimpleBuildStep {
                     reportDir.symlinkSourcesFrom(dir, sourcePattern, taskListener);
                     noOfSymbolicLinks++;
                 } else {
-                    int copied = reportDir.saveSourcesFrom(dir, "**/*.java");
+                    int copied = reportDir.saveSourcesFrom(dir, sourceInclusionPattern, sourceExclusionPattern);
                     logger.print("\n[JaCoCo plugin] - " + dir + " " + copied + " files");
                 }
             }

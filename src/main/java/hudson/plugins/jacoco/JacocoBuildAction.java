@@ -54,7 +54,6 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 	@Deprecated public transient AbstractBuild<?,?> build;
 
 	private final transient PrintStream logger;
-	@Deprecated private transient ArrayList<?> reports;
 	private transient WeakReference<CoverageReport> report;
 	private final String[] inclusions;
 	private final String[] exclusions;
@@ -328,7 +327,7 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 	 * @throws IOException if failed to parse the file.
 	 * @throws InterruptedException if thread is interrupted
 	 */
-	public static JacocoBuildAction load(JacocoHealthReportThresholds thresholds, TaskListener listener, JacocoReportDir layout, String[] includes, String[] excludes) throws IOException {
+	public static JacocoBuildAction load(JacocoHealthReportThresholds thresholds, TaskListener listener, JacocoReportDir layout, String[] includes, String[] excludes) throws IOException, InterruptedException {
 		Map<CoverageElement.Type,Coverage> ratios = loadRatios(layout, includes, excludes);
 		return new JacocoBuildAction(ratios, thresholds, listener, includes, excludes);
 	}
@@ -338,7 +337,7 @@ public final class JacocoBuildAction extends CoverageObject<JacocoBuildAction> i
 	 * Extracts top-level coverage information from the JaCoCo report document.
 	 * @throws InterruptedException if thread is interrupted
 	 */
-	private static Map<Type, Coverage> loadRatios(JacocoReportDir layout, String[] includes, String... excludes) throws IOException {
+	private static Map<Type, Coverage> loadRatios(JacocoReportDir layout, String[] includes, String... excludes) throws IOException, InterruptedException {
 		Map<CoverageElement.Type,Coverage> ratios = new LinkedHashMap<>();
 		ExecutionFileLoader efl = layout.parse(includes, excludes);
         IBundleCoverage bundleCoverage = efl.getBundleCoverage();

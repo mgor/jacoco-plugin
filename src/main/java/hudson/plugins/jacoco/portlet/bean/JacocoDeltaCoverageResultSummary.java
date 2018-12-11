@@ -1,6 +1,5 @@
 package hudson.plugins.jacoco.portlet.bean;
 
-import hudson.model.Job;
 import hudson.model.Run;
 import hudson.plugins.jacoco.portlet.JacocoLoadData;
 

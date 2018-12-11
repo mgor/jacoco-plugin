@@ -12,6 +12,7 @@ import java.io.Serializable;
  * @since 1.7
  */
 public class JacocoHealthReportThresholds implements Serializable {
+    static final long serialVersionUID = 1L;
     private int minClass;
     private int maxClass;
     private int minMethod;

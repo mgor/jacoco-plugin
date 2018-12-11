@@ -33,11 +33,7 @@ import org.powermock.api.easymock.PowerMock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 import hudson.EnvVars;
 import hudson.FilePath;
@@ -515,14 +511,14 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
 		publisher.setSourceExclusionPattern("generated/**/*");
 		publisher.perform(run, workspace, launcher, taskListener);
 
-		assertTrue(new File(run.getRootDir(), "jacoco/classes/Test.class").exists());
-		assertFalse(new File(run.getRootDir(), "jacoco/classes/Test.jar").exists());
-		assertTrue(new File(run.getRootDir(), "jacoco/classes/sub/Test2.class").exists());
-		assertFalse(new File(run.getRootDir(), "jacoco/classes/Test2.class").exists());
-		assertTrue(new File(run.getRootDir(), "jacoco/sources/Test.java").exists());
-		assertTrue(new File(run.getRootDir(), "jacoco/sources/Test.groovy").exists());
-		assertFalse(new File(run.getRootDir(), "jacoco/sources/generated/bean.java").exists());
-		assertFalse(new File(run.getRootDir(), "jacoco/sources/test.png").exists());
+		assertTrue("jacoco/classes/Test.class does not exist", new File(run.getRootDir(), "jacoco/classes/Test.class").exists());
+		assertFalse("jacoco/classes/Test.jar exist", new File(run.getRootDir(), "jacoco/classes/Test.jar").exists());
+		assertTrue("jacoco/classes/sub/Test2.class does not exist", new File(run.getRootDir(), "jacoco/classes/sub/Test2.class").exists());
+		assertFalse("jacoco/classes/Test2.class exist", new File(run.getRootDir(), "jacoco/classes/Test2.class").exists());
+		assertTrue("jacoco/sources/Test.java does not exist", new File(run.getRootDir(), "jacoco/sources/Test.java").exists());
+		assertTrue("jacoco/sources/Test.groovy does not exist", new File(run.getRootDir(), "jacoco/sources/Test.groovy").exists());
+		assertFalse("jacoco/sources/generated/bean.java exist", new File(run.getRootDir(), "jacoco/sources/generated/bean.java").exists());
+		assertFalse("jacoco/sources/test.png exist", new File(run.getRootDir(), "jacoco/sources/test.png").exists());
 		verify(taskListener, run);
 
 		// clean up afterwards
@@ -593,6 +589,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
             PowerMock.replay(taskListener, run, job);
 
             // execute
+            @SuppressWarnings("deprecation")
             JacocoPublisher publisher = new JacocoPublisher("**/**.exec", "**/classes", "**/src/main/java", "", "", false, false, false, "0", "0"
                     , "0", "0", "0", "0", "0", "0"
                     , "0", "0", "0", "0", false,
@@ -602,7 +599,7 @@ public class JacocoPublisherTest extends AbstractJacocoTestBase {
             assertNotNull(buildAction.get());
             assertEquals("Build over build result", "SUCCESS", publisher.checkBuildOverBuildResult(run, taskListener.getLogger()).toString());
         } finally {
-            FileUtils.deleteDirectory(dir)
+            FileUtils.deleteDirectory(dir);
         }
 
 		// verify

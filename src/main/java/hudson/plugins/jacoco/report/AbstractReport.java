@@ -62,6 +62,7 @@ public abstract class AbstractReport<PARENT extends AggregatedReport<?,PARENT,?>
             p = p.getPreviousResult();
             if(p==null)
                 return null;
+            @SuppressWarnings("unchecked")
             SELF prev = (SELF)p.getChildren().get(name);
             if(prev!=null)
                 return prev;

@@ -95,7 +95,7 @@ public class ExecutionFileLoaderTest {
     }
 
     @Test
-    public void testLoadBundleCoverageClassDirectoryNotExists() throws IOException {
+    public void testLoadBundleCoverageClassDirectoryNotExists() throws IOException, InterruptedException {
         ExecutionFileLoader loader = new ExecutionFileLoader();
         loader.setClassDir(new FilePath(new File("NotExisting")));
         IBundleCoverage coverage = loader.loadBundleCoverage();
